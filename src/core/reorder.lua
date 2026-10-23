@@ -98,13 +98,15 @@ local function hasPlayerData(entry)
 end
 
 -- Fallback player check for when there's no player data block: a named subject,
--- no npc/obj/loc data, and a player-only verb.
+-- no npc/obj/loc data, and a player-only verb. Interface entries (which carry
+-- componentData, e.g. chat lines) are excluded so they key by their component.
 ---@param entry table
 ---@return boolean
 local function looksLikePlayerEntry(entry)
     if Guard.read(entry, "npcData") ~= nil
         or Guard.read(entry, "objData") ~= nil
         or Guard.read(entry, "locData") ~= nil
+        or Guard.read(entry, "componentData") ~= nil
     then
         return false
     end
