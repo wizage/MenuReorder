@@ -43,16 +43,16 @@ jobs:
         run: |
           version="${{ steps.version.outputs.version }}"
           # Zip runtime files/folders at the archive ROOT (no wrapper folder),
-          # matching the plugin structure (plugin.json + main.lua at top level).
-          # Dev assets + docs + git are excluded.
-          zip -r "ScavTracker-v$version.zip" \
-            plugin.json main.lua chat data ui
+          # matching the plugin structure (plugin.json + main.lua at top level,
+          # plus the src modules). Dev assets, docs and git are excluded.
+          zip -r "MenuReorder-v$version.zip" \
+            plugin.json main.lua src
 
       - name: Create GitHub Release
         if: steps.version.outputs.changed == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "v${{ steps.version.outputs.version }}"
-          name: "ScavTracker v${{ steps.version.outputs.version }}"
-          files: "ScavTracker-v${{ steps.version.outputs.version }}.zip"
+          name: "MenuReorder v${{ steps.version.outputs.version }}"
+          files: "MenuReorder-v${{ steps.version.outputs.version }}.zip"
           generate_release_notes: true
