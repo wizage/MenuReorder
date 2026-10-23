@@ -1,0 +1,58 @@
+name: Release plugin
+
+# Publishes a zipped plugin build as a GitHub Release, but ONLY when the
+# "version" field in plugin.json changes on a push to main.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'plugin.json'   # only reconsider releasing when the manifest changes
+
+permissions:
+  contents: write       # needed to create tags + releases
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (with history so we can diff the manifest)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2   # current commit + its parent
+
+      - name: Detect plugin.json version change
+        id: version
+        run: |
+          new_version=$(grep -oP '"version"\s*:\s*"\K[^"]+' plugin.json)
+          echo "new=$new_version"
+
+          # Previous version from the parent commit (empty if plugin.json is new).
+          old_version=$(git show HEAD~1:plugin.json 2>/dev/null | grep -oP '"version"\s*:\s*"\K[^"]+' || echo "")
+          echo "old=$old_version"
+
+          if [ "$new_version" != "$old_version" ]; then
+            echo "changed=true"  >> "$GITHUB_OUTPUT"
+            echo "version=$new_version" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build plugin zip (runtime files only)
+        if: steps.version.outputs.changed == 'true'
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          # Zip runtime files/folders at the archive ROOT (no wrapper folder),
+          # matching the plugin structure (plugin.json + main.lua at top level).
+          # Dev assets + docs + git are excluded.
+          zip -r "ScavTracker-v$version.zip" \
+            plugin.json main.lua chat data ui
+
+      - name: Create GitHub Release
+        if: steps.version.outputs.changed == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ steps.version.outputs.version }}"
+          name: "ScavTracker v${{ steps.version.outputs.version }}"
+          files: "ScavTracker-v${{ steps.version.outputs.version }}.zip"
+          generate_release_notes: true
